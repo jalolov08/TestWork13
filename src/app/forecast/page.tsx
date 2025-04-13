@@ -6,6 +6,7 @@ import { WeatherForecastResponse } from "@/types/weather.type";
 import { AxiosError } from "axios";
 import { handleError } from "@/utils/errorHandler";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 export default function Forecast() {
   const [forecast, setForecast] = useState<WeatherForecastResponse | null>(
@@ -17,6 +18,12 @@ export default function Forecast() {
   const searchParams = useSearchParams();
   const city = searchParams.get("city");
 
+  useEffect(() => {
+    if (city) {
+      fetchForecast(city);
+    }
+  }, [city]);
+
   if (!city) {
     return (
       <div className="alert alert-danger mt-3" role="alert">
@@ -24,12 +31,6 @@ export default function Forecast() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (city) {
-      fetchForecast(city);
-    }
-  }, [city]);
 
   const fetchForecast = async (city: string) => {
     setLoading(true);
@@ -79,11 +80,12 @@ export default function Forecast() {
               <div className="card-body text-center">
                 <h5 className="card-title">{day.dt_txt}</h5>
 
-                <img
+                <Image
+                  width={50}
+                  height={50}
                   src={`https://openweathermap.org/img/wn/${day.weather[0].icon}.png`}
                   alt={day.weather[0].description}
                   className="mb-2"
-                  style={{ width: "50px", height: "50px" }}
                 />
 
                 <p className="card-text text-muted">

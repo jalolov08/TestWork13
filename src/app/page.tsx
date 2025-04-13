@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { AxiosError } from "axios";
 import { handleError } from "@/utils/errorHandler";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function Home() {
   const [city, setCity] = useState<string>("");
@@ -101,11 +102,12 @@ export default function Home() {
             {result.name}, {result.sys.country}
           </h3>
 
-          <img
+          <Image
+            width={50}
+            height={50}
             src={`https://openweathermap.org/img/wn/${result.weather[0].icon}.png`}
             alt={result.weather[0].description}
             className="mb-3"
-            style={{ width: "50px", height: "50px" }}
           />
 
           <p>Температура: {result.main.temp}°C</p>
