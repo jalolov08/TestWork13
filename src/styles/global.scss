@@ -1,0 +1,11 @@
+:root {
+  --font-geist-sans: sans-serif;
+  --font-geist-mono: monospace;
+}
+
+body {
+  font-family: var(--font-geist-sans);
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fa;
+}

@@ -1,95 +1,137 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { api } from "@/lib/api";
+import { useWeatherStore } from "@/store/useWeatherStore";
+import { WeatherResponse } from "@/types/weather.type";
+import { useEffect, useState } from "react";
+import { AxiosError } from "axios";
+import { handleError } from "@/utils/errorHandler";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [city, setCity] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const { result, setResult, addFavorite, removeFavorite, isFavorite } =
+    useWeatherStore();
+  const router = useRouter();
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (!city.trim()) {
+      setResult(null);
+    }
+  }, [city, setResult]);
+
+  const fetchWeather = async () => {
+    if (!city.trim()) {
+      setError("Введите название города.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await api.get<WeatherResponse>("weather", {
+        params: { q: city },
+      });
+      setResult(res.data);
+    } catch (err) {
+      handleError(err as AxiosError, setError, "Ошибка при получении данных.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFavoriteClick = () => {
+    if (result) {
+      if (isFavorite(result.name)) {
+        removeFavorite(result.name);
+      } else {
+        addFavorite(result.name);
+      }
+    }
+  };
+
+  const handleViewForecast = () => {
+    if (result) {
+      router.push(`/forecast?city=${result.name}`);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      fetchWeather();
+    }
+  };
+
+  return (
+    <div>
+      <div className="input-group mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Введите город"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <button className="btn btn-primary" onClick={fetchWeather}>
+          Найти
+        </button>
+      </div>
+
+      {loading && (
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Загрузка...</span>
+          </div>
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      )}
+
+      {error && (
+        <div className="alert alert-danger mt-3" role="alert">
+          {error}
+        </div>
+      )}
+
+      {result && !loading && !error && (
+        <div className="card p-3 mt-3">
+          <h3>
+            {result.name}, {result.sys.country}
+          </h3>
+
+          <img
+            src={`https://openweathermap.org/img/wn/${result.weather[0].icon}.png`}
+            alt={result.weather[0].description}
+            className="mb-3"
+            style={{ width: "50px", height: "50px" }}
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+          <p>Температура: {result.main.temp}°C</p>
+          <p>Ощущается как: {result.main.feels_like}°C</p>
+          <p>Погода: {result.weather[0].description}</p>
+          <p>Ветер: {result.wind.speed} м/с</p>
+
+          <button
+            className={`btn ${
+              isFavorite(result.name)
+                ? "btn-outline-success"
+                : "btn-outline-warning"
+            }`}
+            onClick={handleFavoriteClick}
+          >
+            {isFavorite(result.name) ? "В избранном" : "Добавить в избранное"}
+          </button>
+
+          <button
+            className="btn btn-outline-info mt-3"
+            onClick={handleViewForecast}
+          >
+            Смотреть прогноз на 5 дней
+          </button>
+        </div>
+      )}
     </div>
   );
 }
